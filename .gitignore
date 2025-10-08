@@ -1,0 +1,34 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# Virtual environments
+venv/
+.env/
+
+# Model weights & test outputs
+/test_outputs/
+*.pt
+*.pth
+
+# Temporary or local files
+*.log
+*.tmp
+*.bak
+
+# Office & document outputs
+*.docx
+*.xlsx
+*.pdf
+
+# System files
+.DS_Store
+Thumbs.db
+
+# IDE/project configs
+.vscode/
+.idea/

@@ -1,5 +1,12 @@
-train: ./images/train
-val: ./images/val
+path: datasets/vehicles_head
+train: images/train
+val: images/val
 
-nc: 3  # number of classes
-names: ['car', 'truck', 'motorbike']
+names:
+  0: car
+  1: motorcycle
+  2: truck
+  3: bus
+
+# 1 keypoint, mỗi keypoint có 3 giá trị (x, y, visible)
+kpt_shape: [1, 3]  

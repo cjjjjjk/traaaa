@@ -1,0 +1,13 @@
+Logic đánh giá tắc nghẽn:
+
+
+Xác định đầu vào
+- xây dựng ROI, lượng xe phát hiện và biến động trong ROI
+- tỷ lệ diện tích chiếm trong ROI và nhãn của các phương tiện
+
+[Bỏ]
+Vector hướng các phương tiện, nếu có lượng phương tiên đủ để xét.
+    - Theo làn đường -> giao lộ (0,0)
+    - độ lệch chuẩn càng thấp -> tắc nghẽn càng thấp
+
+

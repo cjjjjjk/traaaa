@@ -1,0 +1,18 @@
+// phương án để train tiếp mà không làm "hại" đến khả năng train của mô hình có sẵn ?
+- sử dụng đan xem kết quả mô hình ban đầu detect được, kết hợp với kết quả mới.
+
+
+các vấn đề xuất hiện:
+- camera quay đi -> ROI cần phải set lại.
+
+// Các việc thực hiện:  
+- xây dựng web-tool, gán nhãn
+- finetune model với gg colab
+
+// Kết quả fine-tune model yolov8-pose
+mặc định:  3 cars, 11 motorcycles
+model mới sau khi train: 1 truck, 14 motorcycles
+- mô hình mới cải thiện khả năng detect các phương tiện trong vùng ROI
+
+// Mục tiêu tuần tiếp 7-8:
+- xây dựng phương pháp đánh giá mức độ tắc nghẽn dựa trên các vector phương tiện mà mô hình sau khi train detect được.

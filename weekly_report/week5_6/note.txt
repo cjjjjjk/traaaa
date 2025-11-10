@@ -14,5 +14,10 @@ mặc định:  3 cars, 11 motorcycles
 model mới sau khi train: 1 truck, 14 motorcycles
 - mô hình mới cải thiện khả năng detect các phương tiện trong vùng ROI
 
-// Mục tiêu tuần tiếp 7-8:
+// Mục tiêu tuần tiếp 7-8-9-10:
 - xây dựng phương pháp đánh giá mức độ tắc nghẽn dựa trên các vector phương tiện mà mô hình sau khi train detect được.
+- chỉnh sửa nhãn, bổ sung data, train lại
+
+
+
+- xây dựng giao diện thao tác.

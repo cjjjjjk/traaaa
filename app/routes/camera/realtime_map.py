@@ -1,117 +1,93 @@
 from flask import Blueprint, Response, request
 import cv2
 import time
-import io
 import numpy as np
-import matplotlib.pyplot as plt
-import requests
-import warnings
-from utils.yolo_cam_util import analyze_frame_cam  # dùng chung hàm phân tích camera
 
-warnings.filterwarnings("ignore")
+# Import các hàm tiện ích đã được tách ra
+from utils.call_frame_api import get_camera_frame
+from utils.detect_util import analyze_frame
+from config.base_config import VEHICLE_CLASS_COLORS, BASE_APICALL_VALUE
 
 realtime_map_bp = Blueprint("realtime_map", __name__)
-
-# Dùng lại cookie và header như realtime_detect
-COOKIE_STR = """ASP.NET_SessionId=2pd400jxoiokdowndnju2zdr; .VDMS=E6D97CFABE16A23E4774230850C06957F36B5B3EA1FF8360A13AFBE6CB680692EF54AF6792F4900295E280829B09309FC1C42F3998D647739B7CDA12A3BBEC339828A6DCD87CE1E69EDE5FED4D54D3E641C6DE126BC213E650AF93CA7D237E3F0BBF1FF20C50762E6AE7BB049B7EE780F66A625A; _frontend=!DXIcY2WO+fUXfJrZrha5HPS1wJuimy99qr25sd/0cSvsQGa2NxADtaW2cwiwYrp8paE1JECWJWCs904=; CurrentLanguage=vi; _ga=GA1.3.4923489.1760691959; _gid=GA1.3.274225042.1760691959; _pk_id.1.2f14=7192ec68653c6b65.1760691959.1.1760691959.1760691959.1760691959.; _pk_ses.1.2f14=*; _ga_JCXT8BPG4E=GS2.3.s1760691960$o1$g0$t1760691960$j60$l0$h0; TS01e7700a=0150c7cfd1dc293c4c03a2ac85fec94a52acc6f241c039622d7f59470ce112b88ed79d54a48de2bf7d912f31e100bf2d5ad97a2cb8a0be33f0f7e148086b7a1d1cf1550652ae0a33c727506fdea7d7a8d673254c321f8ba65848425d90a7cb03f63360c739"""
-
-def parse_cookie_string(s):
-    return dict(part.split("=", 1) for part in s.split("; ") if "=" in part)
-
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
-    "Accept": "image/webp,image/apng,image/*,*/*;q=0.8",
-    "Accept-Language": "vi,en;q=0.9",
-    "Referer": "https://giaothong.hochiminhcity.gov.vn/",
-}
-
-COOKIES = parse_cookie_string(COOKIE_STR)
-
-session = requests.Session()
-session.headers.update(HEADERS)
-session.cookies.update(COOKIES)
-
 
 @realtime_map_bp.route("/realtime-map", methods=["GET"])
 def realtime_map():
     """
-        /realtime-map?url=https://giaothong.hochiminhcity.gov.vn:8007/Render/CameraHandler.ashx?id=587ee2aeb807da0011e33d52
+    Cung cấp một map thời gian thực hiển thị các vector phương tiện.
+    /realtime-map?url=https://giaothong.hochiminhcity.gov.vn:8007/Render/CameraHandler.ashx?id=587ee2aeb807da0011e33d52
     """
     camera_base = request.args.get("url")
     if not camera_base:
         return "need 'url'", 400
 
+    # Frame size (white map)
+    # try:
+    #     FRAME_W = int(BASE_APICALL_VALUE["FRAME_W"])
+    #     FRAME_H = int(BASE_APICALL_VALUE["FRAME_H"])
+    # except:
+    #     # Giá trị dự phòng nếu config lỗi
+    #     FRAME_W = 400
+    #     FRAME_H = 260
+
     def generate():
         while True:
             try:
-                ts = int(time.time() * 1000)
-                full_url = f"{camera_base}&bg=black&w=400&h=260&t={ts}"
-
-                r = session.get(full_url, timeout=10, verify=False)
-                if r.status_code != 200 or r.content[:4] == b"<!DO":
-                    print(f"[WARNING] ({r.status_code})")
-                    time.sleep(1)
-                    continue
-
-                img = np.frombuffer(r.content, np.uint8)
-                frame = cv2.imdecode(img, cv2.IMREAD_COLOR)
+                # 1. Gọi API lấy frame
+                frame = get_camera_frame(camera_base)
+                
                 if frame is None:
-                    print("[WARNING].")
-                    time.sleep(1)
+                    print("[INFO] No frame received, retrying...")
+                    time.sleep(2)
                     continue
 
-                detections, _ = analyze_frame_cam(frame)
-                if not detections:
-                    time.sleep(1)
-                    continue
+                # 2. Gọi model detect
+                detections = analyze_frame(frame)
 
-                pts_image = np.float32([[129, 91], [299, 96], [30, 200], [401, 216]])
-                pts_real = np.float32([[5, 7], [12, 7], [5, 0], [12, 0]])
-                M = cv2.getPerspectiveTransform(pts_image, pts_real)
+                # 3. White map - optional
+                # Kích thước map bằng kích thước frame (H, W, C)
+                # map_image = np.full((FRAME_H, FRAME_W, 3), 255, dtype=np.uint8)
 
-                centers = np.float32([[d["center_x"], d["center_y"]] for d in detections])
-                centers = np.expand_dims(centers, axis=0)
-                transformed = cv2.perspectiveTransform(centers, M)[0]
+                # 4. Vẽ vector (mũi tên) lên map
+                if detections:
+                    for det in detections:
+                        bbox = det["bbox"]
+                        kpt = det["keypoint"]
+                        cls_name = det["class"]
+                        
+                        color = VEHICLE_CLASS_COLORS.get(cls_name, (0, 0, 0)) 
+                        
+                        # Tính trung tâm bounding box
+                        center_x = int((bbox[0] + bbox[2]) / 2)
+                        center_y = int((bbox[1] + bbox[3]) / 2)
+                        
+                        # Lấy điểm kpt làm đỉnh
+                        tip_x = int(kpt[0])
+                        tip_y = int(kpt[1])
+                        
+                        tail_x = center_x*2 - tip_x
+                        tail_y = center_y*2- tip_y
+                        
+                        # Vẽ mũi tên: tail -> tip
+                        # cv2.arrowedLine(map_image,   # white map (optional)
+                        cv2.arrowedLine(frame, 
+                                        (tail_x, tail_y), 
+                                        (tip_x, tip_y), 
+                                        color, 
+                                        thickness=1, 
+                                        tipLength=0.2)
 
-                classes = [d["class"] for d in detections]
-                X_real, Y_real = transformed[:, 0], transformed[:, 1]
-
-                plt.figure(figsize=(6, 5))
-                unique_classes = set(classes)
-                for cls in unique_classes:
-                    mask = [c == cls for c in classes]
-                    plt.scatter(X_real[mask], Y_real[mask], label=cls, alpha=0.8)
-
-                plt.plot(
-                    [pts_real[0][0], pts_real[1][0], pts_real[3][0], pts_real[2][0], pts_real[0][0]],
-                    [pts_real[0][1], pts_real[1][1], pts_real[3][1], pts_real[2][1], pts_real[0][1]],
-                    'k--', label='Vùng thực tế'
-                )
-
-                plt.xlim(-2, 15)
-                plt.ylim(-2, 12)
-                plt.gca().set_aspect("equal", adjustable="box")
-
-                plt.xlabel("X (m)")
-                plt.ylabel("Y (m)")
-                plt.title("Realtime Top-Down Map")
-                plt.legend()
-                plt.grid(True)
-                plt.tight_layout()
-
-                buf = io.BytesIO()
-                plt.savefig(buf, format="jpg")
-                plt.close()
-                buf.seek(0)
-                frame_bytes = buf.getvalue()
+                # 5. Encode và yield map_image (ảnh trắng có vector)
+                # _, buffer = cv2.imencode(".jpg", map_image)
+                _, buffer = cv2.imencode(".jpg", frame)
+                frame_bytes = buffer.tobytes()
 
                 yield (b"--frame\r\n"
                        b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n")
 
-                time.sleep(15)
+                time.sleep(10) 
 
             except Exception as e:
-                print(f"[ERROR]: {e}")
+                print(f"[ERROR] in generate loop: {e}")
                 time.sleep(2)
                 continue
 

@@ -9,3 +9,7 @@
   <img src="image.png" alt="Hình mô hình" width="20%" />
   <img src="model_compare.png" alt="So sánh mô hình" width="45%" />
 </p>
+
+- **week7: Vector map**:   *v.10nov*
+
+![alt text](image-1.png)  

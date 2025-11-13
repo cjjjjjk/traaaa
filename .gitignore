@@ -8,10 +8,11 @@ __pycache__/
 
 # Virtual environments
 venv/
-.env/
+app/.env
 
 # Model weights & test outputs
 /test_outputs/
+/test/
 *.pt
 *.pth
 

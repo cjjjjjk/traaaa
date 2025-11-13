@@ -62,3 +62,35 @@ def analyze_frame(frame: np.ndarray):
     except Exception as e:
         print(f"[ERROR] in analyze_frame: {e}")
         return []
+    
+def detections_to_vectors(detections: list) -> list:
+    """
+    Chuyển đổi danh sách detections (từ analyze_frame) thành danh sách
+    các vector (sx, sy, ex, ey) để tính toán độ hỗn loạn.
+
+    Vector được định nghĩa sao cho trung điểm của vector chính là tâm của bounding box.
+    (tức là: tâm bbox nằm giữa điểm đầu sx, sy và điểm cuối ex, ey)
+
+    @param detections: Danh sách các dict, mỗi dict chứa "bbox" và "keypoint".
+    @return: Danh sách các tuple (sx, sy, ex, ey)
+    """
+    vectors = []
+    for detection in detections:
+        bbox = detection["bbox"]  # [x1, y1, x2, y2]
+        kpt = detection["keypoint"]  # [x, y]
+
+        center_x = (bbox[0] + bbox[2]) / 2.0
+        center_y = (bbox[1] + bbox[3]) / 2.0
+
+        # Keypoint
+        ex = float(kpt[0])
+        ey = float(kpt[1])
+
+        sx = 2 * center_x - ex
+        sy = 2 * center_y - ey
+
+        # Chỉ thêm vector nếu có độ dài khác 0
+        if sx != ex or sy != ey:
+            vectors.append((sx, sy, ex, ey))
+
+    return vectors

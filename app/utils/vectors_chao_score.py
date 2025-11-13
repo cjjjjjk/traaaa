@@ -1,13 +1,12 @@
+# app/utils/vectors_chao_score.py
 import math
-# from collections import Counter
 from itertools import combinations
+from sklearn.cluster import DBSCAN
 
 import numpy as np
 
 # Input:
 # vectors: list of tuples (start_x, start_y, end_x, end_y)
-# roi_bbox: (xmin, ymin, xmax, ymax) optional for grid-based local mixture
-# All coordinates in same unit.
 
 def compute_angles_and_lengths(vectors):
     angles = []
@@ -42,34 +41,70 @@ def angular_entropy(angles, k_bins=12):
     H_norm = H / math.log(k_bins)
     return H_norm
 
-def grid_local_mixture(angles, midpoints, counts_lengths, roi_bbox, grid_size=4, k_bins=8):
-    if roi_bbox is None or len(angles) == 0:
+def cluster_local_mixture(angles, midpoints, counts_lengths,dbscan_eps=50.0, dbscan_min_samples=3):
+    """
+    Tính toán độ hỗn loạn cục bộ :
+    phân cụm DBSCAN 
+    
+    :angles: Mảng các góc (radian)
+    :midpoints: Danh sách các (x, y) là trung điểm của vector
+    :counts_lengths: Mảng trọng số (ví dụ: độ dài) của mỗi vector
+    :dbscan_eps: (pixels) Khoảng cách tối đa giữa hai mẫu trong 1 cụm.
+    :dbscan_min_samples: số mẫu tối thiểu để tạo thành một cụm (vùng).
+    :return: Điểm hỗn loạn cục bộ (0.0 đến 1.0)
+    """
+    if len(midpoints) < dbscan_min_samples:
+        # Không đủ điểm để phân cụm, coi như không có hỗn loạn cục bộ
         return 0.0
-    xmin, ymin, xmax, ymax = roi_bbox
-    gx = grid_size
-    gy = grid_size
+
+    # 1. Chạy DBSCAN để tìm các "vùng"
+    # midpoints cần phải là một mảng NumPy
+    midpoints_array = np.array(midpoints)
+    
+    # eps=50 có nghĩa là các xe có trung điểm cách nhau trong vòng 50 pixel 
+    # sẽ được coi là "hàng xóm"
+    db = DBSCAN(eps=dbscan_eps, min_samples=dbscan_min_samples).fit(midpoints_array)
+    
+    # labels là một mảng, mỗi xe được gán cho một ID cụm (0, 1, 2, ...)
+    # label = -1 có nghĩa là "nhiễu" (xe đơn độc)
+    labels = db.labels_
+    
+    # Lấy các ID cụm duy nhất, bỏ qua nhiễu (-1)
+    unique_labels = set(labels)
+    unique_labels.discard(-1)
+
+    if not unique_labels:
+        return 0.0
+
     cell_scores = []
     weights = []
-    for ix in range(gx):
-        for iy in range(gy):
-            x0 = xmin + (xmax - xmin) * ix / gx
-            x1 = xmin + (xmax - xmin) * (ix + 1) / gx
-            y0 = ymin + (ymax - ymin) * iy / gy
-            y1 = ymin + (ymax - ymin) * (iy + 1) / gy
-            idxs = []
-            for i, (mx, my) in enumerate(midpoints):
-                if x0 <= mx < x1 and y0 <= my < y1:
-                    idxs.append(i)
-            if not idxs:
-                continue
-            sub_angles = angles[idxs]
-            sub_w = np.sum(counts_lengths[idxs])
-            R_cell = mean_resultant_length(sub_angles)
-            score_cell = 1.0 - R_cell
-            cell_scores.append(score_cell * sub_w)
-            weights.append(sub_w)
-    if not weights:
+
+    # 2. Tính toán độ hỗn loạn cho từng "vùng" (cụm)
+    for k in unique_labels:
+        # Lấy chỉ số (indices) của tất cả các vector thuộc cụm 'k'
+        idxs = np.where(labels == k)[0]
+        
+        if len(idxs) < dbscan_min_samples:
+            continue
+
+        # Lấy góc và trọng số của các vector trong cụm này
+        sub_angles = angles[idxs]
+        sub_w = np.sum(counts_lengths[idxs]) # Trọng số của cụm này
+
+        # Tính toán mức độ "trật tự" bên trong cụm
+        R_cell = mean_resultant_length(sub_angles)
+        
+        # Điểm hỗn loạn = 1.0 - độ trật tự
+        score_cell = 1.0 - R_cell
+        
+        # Tính điểm hỗn loạn có trọng số
+        cell_scores.append(score_cell * sub_w)
+        weights.append(sub_w)
+
+    if not weights or sum(weights) == 0:
         return 0.0
+    
+    # 3. Trả về trung bình có trọng số của tất cả các cụm
     return float(sum(cell_scores) / sum(weights))
 
 def angle_diff(a, b):
@@ -158,10 +193,14 @@ def pairwise_conflict_index(angles, lengths, segments, sigma=5.0):
         return 0.0
     return float(total / denom)
 
-def compute_chaos_score(vectors, roi_bbox=None,
-                        angle_bins=16, grid_size=4, sigma=5.0,
+def compute_chaos_score(vectors,
+                        angle_bins=16, 
+                        sigma=5.0,
+                        dbscan_eps=75.0, 
+                        dbscan_min_samples=3,
                         weights=(0.25, 0.20, 0.25, 0.30)):
     angles, lengths, midpoints, segments = compute_angles_and_lengths(vectors)
+    
     if len(angles) == 0:
         return {
             "final_score": 0.0,
@@ -170,15 +209,28 @@ def compute_chaos_score(vectors, roi_bbox=None,
             "local_mixture": 0.0,
             "conflict_index": 0.0
         }
+
+    # 1. Chaos Angle (Toàn cục)
     R = mean_resultant_length(angles)
     chaos_angle = 1.0 - R
+
+    # 2. Entropy (Đa dạng hướng)
     entropy_index = angular_entropy(angles, k_bins=angle_bins)
-    counts_lengths = lengths  # Could use ones or lengths as weights per-vehicle
-    local_mixture = grid_local_mixture(angles, midpoints, counts_lengths, roi_bbox, grid_size=grid_size, k_bins=angle_bins)
+
+    # 3. Local Mixture (Cục bộ)
+    counts_lengths = lengths  # Trọng số có thể là độ dài hoặc chỉ là 1
+    local_mixture = cluster_local_mixture(angles, midpoints, counts_lengths, 
+                                          dbscan_eps=dbscan_eps, 
+                                          dbscan_min_samples=dbscan_min_samples)
+
+    # 4. Conflict Index (Xung đột)
     conflict_index = pairwise_conflict_index(angles, lengths, segments, sigma=sigma)
+    
+    # 5. Tính điểm cuối cùng
     a, b, c, d = weights
     final = a * chaos_angle + b * entropy_index + c * local_mixture + d * conflict_index
     final = max(0.0, min(1.0, final))
+    
     return {
         "final_score": final,
         "chaos_angle": chaos_angle,

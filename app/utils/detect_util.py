@@ -3,7 +3,11 @@ import cv2
 import numpy as np
 from config.base_config import BASE_MODEL_VALUE
 
-MODEL_PATH = "utils/model/best.pt"
+import os
+
+# Define model path relative to this file
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(BASE_DIR, "model", "yolo", "best.pt")
 try:
     model = YOLO(MODEL_PATH)
     CLASS_NAMES = model.names

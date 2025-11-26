@@ -1,0 +1,30 @@
+{
+  "camera_id": -> longtitude, latitude
+
+# dữ liệu tại thời điểm gọi API
+  "timestamp": "",
+  "hour": 0,
+  "day_of_week": 0,
+  "is_weekend": false,
+  "is_holiday": false,
+  "month": 0,
+  "season": "",
+
+# data thời tiết dựa vào longtitude, latitude của camera id
+  "weather_condition": "",
+  "rain_intensity": 0.0,
+  "temperature_c": 0.0,
+  "humidity": 0.0,
+  "visibility_km": 0.0,
+  "is_flooded": false,
+  "special_event": false,
+  "event_type": "",
+  "event_expected_attendance": 0,
+  "road_construction_planned": false,
+
+
+- nhãn: project III
+- model (car_count, truck_count, bus_count, motorcycle_count, vector_chao, road_area pixel)
+  "congestion_level": 0,
+  "congestion_score": 0.0
+}

@@ -33,3 +33,7 @@ Thumbs.db
 # IDE/project configs
 .vscode/
 .idea/
+
+
+# app data
+/app/data/

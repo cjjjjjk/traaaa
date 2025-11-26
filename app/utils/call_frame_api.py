@@ -1,9 +1,12 @@
 import requests
 import time
+import os
+from datetime import datetime
 import numpy as np
 import cv2
 import warnings
 from config.base_config import BASE_APICALL_VALUE
+from utils.segment_util import detect_road_area
 
 warnings.filterwarnings("ignore")
 
@@ -40,6 +43,21 @@ def get_camera_frame(camera_base_url: str):
         if frame is None:
             print("[WARNING] Frame decode failed.")
             return None
+        
+        # Save frame to disk
+        save_dir = os.path.join("data", "frames")
+        os.makedirs(save_dir, exist_ok=True)
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{timestamp}.jpg"
+        save_path = os.path.join(save_dir, filename)
+        
+        cv2.imwrite(save_path, frame)
+        # print(f"[INFO] Saved frame to {save_path}")
+
+        # Test road detection
+        road_pixels = detect_road_area(frame)
+        print(f"Road pixels: {road_pixels}")
         
         return frame
 

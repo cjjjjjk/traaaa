@@ -13,3 +13,8 @@
 - **week7: Vector map**:   *v.10nov*
 
 ![alt text](image-1.png)  
+
+- **week8-9-10-11: data processing**:   *v.1dec*  
+
+![alt text](image-2.png)
+![alt text](image-3.png)

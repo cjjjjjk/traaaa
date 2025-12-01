@@ -63,10 +63,6 @@ def update_congestion_score():
         # Parse congestion_score
         df['score_numeric'] = df['congestion_score'].apply(lambda x: clean_and_parse(x, is_score=True))
 
-        # Debug print
-        print("Parsed Data Sample:")
-        print(df[['road_area_pixels', 'score_numeric']].head())
-
         # Convert timestamp to datetime
         df['timestamp'] = pd.to_datetime(df['timestamp'])
         

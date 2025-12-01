@@ -40,8 +40,9 @@ def realtime_crawler():
     def generate():
         while True:
             try:
+                current_time = datetime.now()
                 # 1. Gọi API lấy frame
-                frame = get_camera_frame(full_camera_url)
+                frame = get_camera_frame(full_camera_url, timestamp=current_time)
                 
                 if frame is None:
                     # Nếu lỗi lấy ảnh, báo lỗi json rồi thử lại sau
@@ -87,7 +88,7 @@ def realtime_crawler():
                 # 5. Gửi dữ liệu lên Google Sheet
                 log_data = {
                     "camera_id": camera_id,
-                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "timestamp": current_time.strftime("%Y-%m-%d %H:%M:%S"),
                     "car_count": counts["car"],
                     "truck_count": counts["truck"],
                     "bus_count": counts["bus"],
@@ -106,7 +107,6 @@ def realtime_crawler():
                     "data": log_data
                 }
                 
-                # Quan trọng: Thêm \n để client phân biệt từng lần gửi
                 yield json.dumps(response_data) + "\n"
 
                 # 7. Nghỉ 15 giây

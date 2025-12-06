@@ -2,6 +2,7 @@ import pandas as pd
 import gspread
 import numpy as np
 from utils.gg_sheet_setup import gg_sheet_config
+from config.base_config import DATABASE_UPDATE_RULE
 
 def update_congestion_score():
     try:
@@ -128,15 +129,28 @@ def update_congestion_score():
             
         # Prepare column data
         # Write back as floats. 
-        cell_values = [[float(s) if s is not None else 0.0] for s in new_scores]
         
-        start_cell = gspread.utils.rowcol_to_a1(2, col_index)
-        end_cell = gspread.utils.rowcol_to_a1(len(new_scores) + 1, col_index)
-        range_name = f"{start_cell}:{end_cell}"
+        # Get start line from config
+        start_line = DATABASE_UPDATE_RULE.get('update_from_line', 2)
+        # Ensure we don't go below row 2 (data start)
+        start_line = max(2, start_line)
         
-        sheet.update(range_name, cell_values)
+        # Calculate index in new_scores (which starts from row 2)
+        # Row 2 -> Index 0
+        start_index = start_line - 2
         
-        return {"status": "success", "message": f"Updated {len(new_scores)} rows"}
+        if start_index < len(new_scores):
+            cell_values = [[float(s) if s is not None else 0.0] for s in new_scores[start_index:]]
+            
+            start_cell = gspread.utils.rowcol_to_a1(start_line, col_index)
+            end_cell = gspread.utils.rowcol_to_a1(start_line + len(cell_values) - 1, col_index)
+            range_name = f"{start_cell}:{end_cell}"
+            
+            sheet.update(range_name, cell_values)
+            
+            return {"status": "success", "message": f"Updated {len(cell_values)} rows starting from line {start_line}"}
+        else:
+            return {"status": "success", "message": f"No rows to update (start_line {start_line} beyond data length {len(new_scores)})"}
         
     except Exception as e:
         print(f"[ERROR] update_congestion_score: {e}")

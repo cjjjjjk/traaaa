@@ -30,3 +30,8 @@ VEHICLE_CLASS_COLORS = {
 #     "truck": 40,
 #     "default": 25 
 # }
+
+# DATA_RULE 
+DATABASE_UPDATE_RULE = {
+    'update_from_line': 724
+}

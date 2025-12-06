@@ -10,11 +10,19 @@
   <img src="model_compare.png" alt="So sánh mô hình" width="45%" />
 </p>
 
-- **week7: Vector map**:   *v.10nov*
+- **week7-8: Vector map**:   *v.10nov*
 
 ![alt text](image-1.png)  
 
-- **week8-9-10-11: data processing**:   *v.1dec*  
+- **week9-10-11-12: data processing**:   *v.1dec*  
 
 ![alt text](image-2.png)
-![alt text](image-3.png)
+
+- **week13: model training + prediction**:   *v.6dec*
+  - 1 camera dataset only  
+  ![alt text](image-4.png)
+
+| model predicted | frames |
+|---|---|
+| ![alt text](image-5.png) | ![alt text](image-6.png) |  
+| 

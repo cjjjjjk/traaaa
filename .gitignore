@@ -13,6 +13,7 @@ app/.env
 # Model weights & test outputs
 /test_outputs/
 /test/
+/tests/
 *.pt
 *.pth
 

@@ -25,4 +25,11 @@
 | model predicted | frames |
 |---|---|
 | ![alt text](image-5.png) | ![alt text](image-6.png) |  
-| 
+
+- **week15: improve data quality**:   *v.25dec*
+> sorted by final score  
+![alt text](image-8.png)  
+> sort by total vehicles  
+![alt text](image-7.png)  
+> compare predict and real data  
+![alt text](image-9.png)  

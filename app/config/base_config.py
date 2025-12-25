@@ -33,5 +33,5 @@ VEHICLE_CLASS_COLORS = {
 
 # DATA_RULE 
 DATABASE_UPDATE_RULE = {
-    'update_from_line': 724
+    'update_from_line': 0
 }

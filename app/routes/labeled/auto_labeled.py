@@ -6,8 +6,11 @@ auto_labeled_bp = Blueprint('auto_labeled', __name__)
 @auto_labeled_bp.route('/auto-label', methods=['POST', 'GET'])
 def auto_label_data():
     """
-    API to automatically label data on Google Sheets.
-    Updates 'congestion_score' based on 'road_area_pixels'.
+    api to automatically label data on google sheets
+    
+    logic:
+    - if manual scores exist at min/max area in each hour: use interpolation
+    - otherwise: use formula gate * (0.6 * density + 0.4 * chaos) with baseline 0.1
     """
     try:
         result = update_congestion_score()

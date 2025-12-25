@@ -20,7 +20,7 @@ def train_logistic_regression():
         app_dir = os.path.abspath(os.path.join(current_dir, '..', '..'))
         
         # path to database.csv
-        data_path = os.path.join(app_dir, 'data', 'raw', 'database.csv')
+        data_path = os.path.join(app_dir, 'data', 'raw', 'frame_cameras.csv')
         
         # path to save model
         model_dir = os.path.join(app_dir, 'utils', 'model', 'logicstic')
@@ -85,7 +85,7 @@ def train_logistic_regression():
         
         return jsonify({
             "status": "success",
-            "message": "logistic regression model trained successfully",
+            "message": "logistic regression model trained successfully on frame_cameras.csv",
             "details": {
                 "total_samples": len(df),
                 "positive_samples": positive_samples,

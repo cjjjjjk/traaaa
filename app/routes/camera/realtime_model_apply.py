@@ -1,3 +1,4 @@
+import cv2
 from flask import Blueprint, request, jsonify
 import numpy as np
 import pickle
@@ -17,6 +18,10 @@ realtime_model_apply_bp = Blueprint("realtime_model_apply", __name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 APP_DIR = os.path.abspath(os.path.join(BASE_DIR, '..', '..'))
 MODEL_DIR = os.path.join(APP_DIR, 'utils', 'model', 'logicstic')
+APPLIED_DIR = os.path.join(APP_DIR, 'data', 'applied')
+
+# ensure applied directory exists
+os.makedirs(APPLIED_DIR, exist_ok=True)
 
 model_path = os.path.join(MODEL_DIR, 'logistic_model.pkl')
 scaler_path = os.path.join(MODEL_DIR, 'scaler.pkl')
@@ -36,19 +41,20 @@ except Exception as e:
 
 @realtime_model_apply_bp.route("/realtime-score", methods=["GET"])
 def realtime_score():
-    """
-    api to detect vehicles and apply logistic regression model
-    returns detection data + model prediction score
-    """
     full_camera_url = request.args.get("url")
     if not full_camera_url:
-        return jsonify({"error": "missing parameter 'url'"}), 400
+        return jsonify({
+            "status": "error",
+            "message": "missing parameter 'url'"
+        }), 400
     
     # check if model is loaded
     if logistic_model is None or scaler is None:
         return jsonify({
             "status": "error",
-            "message": "logistic model not loaded. please train model first at /model/train-logistic"
+            "message": "logistic model not loaded. please train model first at /model/train-logistic",
+            "detection_data": {},
+            "model_prediction": {}
         }), 500
     
     try:
@@ -73,22 +79,27 @@ def realtime_score():
         if frame is None:
             return jsonify({
                 "status": "error",
-                "message": "failed to get frame from camera"
+                "message": "failed to get frame from camera",
+                "detection_data": {},
+                "model_prediction": {}
             }), 500
         
-        # 2. detect vehicles (yolo)
+        # 2. detect vehicles using yolo model
         detections = analyze_frame(frame)
         
-        # 3. calculate vectors & count vehicles
+        # 3. calculate vectors and count vehicles by type
         vectors = []
         counts = {"car": 0, "truck": 0, "bus": 0, "motorcycle": 0}
         
         for det in detections:
             bbox = det["bbox"]
             kpt = det["keypoint"]
+            cls_name = det["class"]
             
-            center_x = int((bbox[0] + bbox[2]) / 2)
-            center_y = int((bbox[1] + bbox[3]) / 2)
+            # calculate vector from center to keypoint
+            x1, y1, x2, y2 = map(int, bbox)
+            center_x = int((x1 + x2) / 2)
+            center_y = int((y1 + y2) / 2)
             tip_x = int(kpt[0])
             tip_y = int(kpt[1])
             tail_x = center_x * 2 - tip_x
@@ -96,11 +107,23 @@ def realtime_score():
             
             vectors.append((tail_x, tail_y, tip_x, tip_y))
             
-            cls_name = det["class"]
             if cls_name in counts:
                 counts[cls_name] += 1
+            
+            # Draw bbox
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            # Draw label
+            cv2.putText(frame, cls_name, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+            # Draw vector (arrow)
+            cv2.arrowedLine(frame, (tail_x, tail_y), (tip_x, tip_y), (0, 0, 255), 2, tipLength=0.3)
+            
+        # Save image with vectors
+        file_name = current_time.strftime("%Y%m%d_%H%M%S.jpg")
+        save_path = os.path.join(APPLIED_DIR, file_name)
+        cv2.imwrite(save_path, frame)
+        print(f"[INFO] Saved applied frame to {save_path}")
         
-        # 4. calculate chaos score & road area
+        # 4. compute chaos score and road area
         raw_chaos = compute_chaos_score(vectors)
         chao_score = 0.0
         if isinstance(raw_chaos, dict):
@@ -110,7 +133,7 @@ def realtime_score():
         
         road_pixels = detect_road_area(frame)
         
-        # 5. prepare detection data
+        # 5. prepare detection data with all features
         detection_data = {
             "camera_id": camera_id,
             "timestamp": current_time.strftime("%Y-%m-%d %H:%M:%S"),
@@ -122,9 +145,8 @@ def realtime_score():
             "vectors_chao_score": float(chao_score)
         }
         
-        # 6. apply logistic regression model
+        # 6. apply prediction model
         # prepare features in same order as training
-        feature_cols = ['car_count', 'truck_count', 'bus_count', 'motorcycle_count', 'road_area_pixels', 'vectors_chao_score']
         X = np.array([[
             detection_data['car_count'],
             detection_data['truck_count'],
@@ -137,27 +159,28 @@ def realtime_score():
         # scale features
         X_scaled = scaler.transform(X)
         
-        # predict probability
-        predicted_prob = logistic_model.predict_proba(X_scaled)[0, 1]
-        predicted_class = logistic_model.predict(X_scaled)[0]
+        # predict congestion probability
+        congestion_score = float(logistic_model.predict_proba(X_scaled)[0, 1])
         
-        # 7. prepare response
+        # 7. prepare response with required format
         response_data = {
-            "status": "success",
             "detection_data": detection_data,
             "model_prediction": {
-                "congestion_probability": float(predicted_prob),
-                # "congestion_class": int(predicted_class),
-                "threshold": 0.38,
-                # "interpretation": "congested" if predicted_class == 1 else "not congested"
-            }
+                "congestion_score": congestion_score,
+                "threshold": 0.45
+            },
+            "status": "success"
         }
         
         return jsonify(response_data), 200
         
     except Exception as e:
         print(f"[ERROR] realtime_score: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             "status": "error",
-            "message": str(e)
+            "message": str(e),
+            "detection_data": {},
+            "model_prediction": {}
         }), 500

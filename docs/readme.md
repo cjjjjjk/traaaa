@@ -33,3 +33,10 @@
 ![alt text](image-7.png)  
 > compare predict and real data  
 ![alt text](image-9.png)  
+
+
+> model compared
+<div style="display: flex; justify-content: space-around;">
+  <img src="image_21.png" alt="image_1" width="48%">
+  <img src="image_2.png" alt="image_2" width="48%">
+</div>

@@ -20,7 +20,7 @@ def train_logistic_regression():
         app_dir = os.path.abspath(os.path.join(current_dir, '..', '..'))
         
         # path to database.csv
-        data_path = os.path.join(app_dir, 'data', 'raw', 'frame_cameras.csv')
+        data_path = os.path.join(app_dir, 'data', 'raw', 'databases.csv')
         
         # path to save model
         model_dir = os.path.join(app_dir, 'utils', 'model', 'logicstic')
@@ -57,7 +57,7 @@ def train_logistic_regression():
         Y_continuous = df['congestion_score']
         
         # convert target to binary (threshold 0.38)
-        threshold = 0.38
+        threshold = 0.45
         Y_binary = (Y_continuous >= threshold).astype(int)
         
         # 3. normalize features (min-max scaling)
@@ -85,7 +85,7 @@ def train_logistic_regression():
         
         return jsonify({
             "status": "success",
-            "message": "logistic regression model trained successfully on frame_cameras.csv",
+            "message": "logistic regression model trained successfully on databases.csv",
             "details": {
                 "total_samples": len(df),
                 "positive_samples": positive_samples,

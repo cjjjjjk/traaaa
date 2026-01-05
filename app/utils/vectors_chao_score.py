@@ -19,23 +19,23 @@ def compute_chaos_vector(
     if N < 2:
         return 0.0
 
-    # 1. compute angles
+    #compute angles
     angles = []
     for sx, sy, ex, ey in vectors:
         angles.append(math.atan2(ey - sy, ex - sx))
 
     angles = np.asarray(angles)
 
-    # 2. directional disorder
+    #directional disorder
     R = math.hypot(np.cos(angles).sum(), np.sin(angles).sum()) / N
     direction_disorder = 1.0 - R   # [0,1]
 
-    # 3. count gate (sigmoid)
+    #count gate (sigmoid)
     N0 = 8     # threshold for "crowded"
     k = 3.0
     count_factor = 1.0 / (1.0 + math.exp(-(N - N0) / k))
 
-    # 4. final disorder
+    #final disorder
     disorder = direction_disorder * count_factor
 
     return float(max(0.0, min(1.0, disorder)))

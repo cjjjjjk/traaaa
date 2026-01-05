@@ -6,6 +6,7 @@ from routes.camera.realtime_map import realtime_map_bp
 from routes.camera.realtime_crawler import realtime_crawler_bp
 from routes.camera.local_crawler import local_crawler_bp
 from routes.camera.realtime_model_apply import realtime_model_apply_bp
+from routes.camera.realtime_model_cnn_apply import realtime_model_cnn_apply_bp
 # from routes.camera.realtime_analyze import realtime_analyze_bp
 from routes.data.crud_frame_data import data_bp
 from routes.data.fix_filenames import fix_filenames_bp
@@ -19,6 +20,7 @@ app.register_blueprint(realtime_map_bp, url_prefix="/realtime")
 app.register_blueprint(realtime_crawler_bp, url_prefix="/realtime")
 app.register_blueprint(local_crawler_bp, url_prefix="/realtime")
 app.register_blueprint(realtime_model_apply_bp, url_prefix="/realtime")
+app.register_blueprint(realtime_model_cnn_apply_bp, url_prefix="/realtime")
 
 app.register_blueprint(data_bp, url_prefix="/")
 app.register_blueprint(fix_filenames_bp, url_prefix="/data")

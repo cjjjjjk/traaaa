@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>model realtime applied</title>
+    <meta charset="utf-8">
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #1a1a1a;
+            font-family: 'Arial', sans-serif;
+            color: #ffffff;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #00ff88;
+            margin-bottom: 10px;
+        }
+
+        .info {
+            text-align: center;
+            color: #888;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .image-container {
+            text-align: center;
+            background-color: #2a2a2a;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .refresh-info {
+            text-align: center;
+            margin-top: 15px;
+            color: #00ff88;
+            font-size: 12px;
+        }
+
+        .refresh {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 15px;
+            color: #00ff88;
+            font-size: 12px;
+        }
+
+        .countdown {
+            color: #ffaa00;
+            font-weight: bold;
+        }
+
+        .debug {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #2a2a2a;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            color: #0f0;
+            max-height: 300px;
+            overflow-y: auto;
+            transition: all 0.3s ease;
+        }
+
+        .debug.hidden {
+            display: none;
+        }
+
+        .toggle-console-btn {
+            display: inline-flex;
+        }
+
+        .toggle-console-btn button {
+            background-color: #4a90e2;
+            color: #ffffff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            font-family: monospace;
+        }
+
+        .toggle-console-btn button:hover {
+            background-color: #357abd;
+            transform: scale(1.05);
+        }
+
+        .toggle-console-btn button:active {
+            transform: scale(0.95);
+        }
+
+        .stop-btn {
+            display: inline-flex;
+        }
+
+        .stop-btn button {
+            background-color: #e74c3c;
+            color: #ffffff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            font-family: monospace;
+        }
+
+        .stop-btn button:hover {
+            background-color: #c0392b;
+            transform: scale(1.05);
+        }
+
+        .stop-btn button:active {
+            transform: scale(0.95);
+        }
+
+        .stop-btn button.running {
+            background-color: #e74c3c;
+        }
+
+        .stop-btn button.stopped {
+            background-color: #27ae60;
+        }
+
+        .stop-btn button.stopped:hover {
+            background-color: #229954;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🚦 model realtime applied</h1>
+
+        <div class="image-container">
+            <img id="cnn-image" src="" alt="cnn prediction">
+        </div>
+
+        <div class="refresh">
+            <div class="toggle-console-btn">
+                <button id="toggle-btn" onclick="toggleConsole()">>_</button>
+            </div>
+            <div class="stop-btn">
+                <button id="stop-btn" onclick="toggleAutoRefresh()" class="running">⏸</button>
+            </div>
+            <span>next refresh in <span class="countdown" id="countdown">15</span> seconds</span>
+        </div>
+
+
+
+        <div class="debug" id="debug-console">
+            <div>debug console:</div>
+            <div id="debug-log"></div>
+        </div>
+    </div>
+
+    <script>
+        // replace with your actual camera url
+        const CAMERA_URL = 'https://giaothong.hochiminhcity.gov.vn:8007/Render/CameraHandler.ashx?id=587ee2aeb807da0011e33d52';
+        const API_ENDPOINT = 'http://localhost:5000/realtime/realtime-cnn-score';
+
+        let secondsLeft = 15;
+        const countdownElement = document.getElementById('countdown');
+        const imageElement = document.getElementById('cnn-image');
+        const debugLog = document.getElementById('debug-log');
+        const debugConsole = document.getElementById('debug-console');
+        const toggleBtn = document.getElementById('toggle-btn');
+        const stopBtn = document.getElementById('stop-btn');
+        let consoleVisible = true;
+        let autoRefreshEnabled = true;
+        let refreshIntervalId = null;
+        let countdownIntervalId = null;
+
+        // toggle console visibility and button color
+        function toggleConsole() {
+            consoleVisible = !consoleVisible;
+            if (consoleVisible) {
+                debugConsole.classList.remove('hidden');
+                toggleBtn.style.backgroundColor = '#4a90e2';
+                toggleBtn.textContent = '>_';
+            } else {
+                debugConsole.classList.add('hidden');
+                toggleBtn.style.backgroundColor = '#666';
+                toggleBtn.textContent = '_<';
+            }
+        }
+
+        // debug function
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            debugLog.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+            console.log(message);
+        }
+
+        // function to refresh image
+        function refreshImage() {
+            const timestamp = new Date().getTime();
+            const newSrc = `${API_ENDPOINT}?url=${encodeURIComponent(CAMERA_URL)}&t=${timestamp}`;
+            log(`refreshing image... url: ${newSrc}`);
+
+            imageElement.onload = () => {
+                log('✓ image loaded successfully');
+            };
+
+            imageElement.onerror = () => {
+                log('✗ failed to load image');
+            };
+
+            imageElement.src = newSrc;
+            secondsLeft = 15;
+        }
+
+        // toggle auto-refresh on/off
+        function toggleAutoRefresh() {
+            autoRefreshEnabled = !autoRefreshEnabled;
+
+            if (autoRefreshEnabled) {
+                // resume auto-refresh
+                stopBtn.classList.remove('stopped');
+                stopBtn.classList.add('running');
+                stopBtn.textContent = '⏸';
+                log('auto-refresh resumed');
+
+                // restart intervals
+                startIntervals();
+            } else {
+                // pause auto-refresh
+                stopBtn.classList.remove('running');
+                stopBtn.classList.add('stopped');
+                stopBtn.textContent = '▶';
+                log('auto-refresh paused');
+
+                // clear intervals
+                if (refreshIntervalId) {
+                    clearInterval(refreshIntervalId);
+                    refreshIntervalId = null;
+                }
+                if (countdownIntervalId) {
+                    clearInterval(countdownIntervalId);
+                    countdownIntervalId = null;
+                }
+            }
+        }
+
+        // start countdown and refresh intervals
+        function startIntervals() {
+            // clear existing intervals first
+            if (countdownIntervalId) clearInterval(countdownIntervalId);
+            if (refreshIntervalId) clearInterval(refreshIntervalId);
+
+            // countdown timer
+            secondsLeft = 15;
+            countdownIntervalId = setInterval(() => {
+                if (autoRefreshEnabled) {
+                    secondsLeft--;
+                    if (secondsLeft <= 0) {
+                        secondsLeft = 15;
+                    }
+                    countdownElement.textContent = secondsLeft;
+                }
+            }, 1000);
+
+            // refresh image every 15 seconds
+            refreshIntervalId = setInterval(() => {
+                if (autoRefreshEnabled) {
+                    log('15 seconds elapsed, triggering refresh');
+                    refreshImage();
+                }
+            }, 15000);
+        }
+
+        // initial setup
+        log('starting auto-refresh every 15 seconds...');
+        startIntervals();
+
+        // initial refresh
+        log('initial refresh in 1 second...');
+        setTimeout(() => {
+            refreshImage();
+        }, 1000);
+    </script>
+</body>
+
+</html>

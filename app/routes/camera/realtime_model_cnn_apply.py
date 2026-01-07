@@ -44,7 +44,7 @@ APPLIED_DIR = os.path.join(APP_DIR, 'data', 'applied_cnn_2')
 # ensure applied directory exists
 os.makedirs(APPLIED_DIR, exist_ok=True)
 
-model_path = os.path.join(MODEL_DIR, 'congestion_cnn_model_2.pth')
+model_path = os.path.join(MODEL_DIR, 'congestion_cnn_model.pth')
 
 # try to load cnn model
 try:    
@@ -174,29 +174,6 @@ def realtime_cnn_score():
             text_color = (255, 0, 0)
         
         draw.text((x, y), score_text, fill=text_color, font=font_score)
-        
-        # add timestamp at bottom left
-        timestamp_text = current_time.strftime("%Y-%m-%d %H:%M:%S")
-        try:
-            font_timestamp = ImageFont.truetype("arial.ttf", 20)
-        except:
-            try:
-                font_timestamp = ImageFont.truetype("Arial.ttf", 20)
-            except:
-                font_timestamp = ImageFont.load_default()
-        
-        # draw timestamp with background
-        ts_bbox = draw.textbbox((0, 0), timestamp_text, font=font_timestamp)
-        ts_width = ts_bbox[2] - ts_bbox[0]
-        ts_height = ts_bbox[3] - ts_bbox[1]
-        ts_x = 10
-        ts_y = pil_frame.height - ts_height - 10
-        
-        draw.rectangle(
-            [ts_x - 3, ts_y - 3, ts_x + ts_width + 3, ts_y + ts_height + 3],
-            fill=(0, 0, 0, 180)
-        )
-        draw.text((ts_x, ts_y), timestamp_text, fill=(255, 255, 255), font=font_timestamp)
         
         # convert back to opencv format
         frame = cv2.cvtColor(np.array(pil_frame), cv2.COLOR_RGB2BGR)
